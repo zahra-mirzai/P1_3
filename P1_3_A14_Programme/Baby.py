@@ -7,6 +7,7 @@ import music
 #radio.config(group=23, channel=2, address=0x11111111)
 #default : channel=7 (0-83), address = 0x75626974, group = 0 (0-255)
 
+nonce_counter = 0      #pour que les nonces soient uniques pour chaque msg
 
 
 def hashing(string):
@@ -82,6 +83,14 @@ def send_packet(key, type, content):
            (str) content:   Données à envoyer
 	:return none
     """
+	global nonce_counter
+	nonce_counter += 1    #donc direct le premier msg a un nonce de 1
+	nonce = str(nonce_counter)   
+	contenu = nonce + ":" + content
+	packet = type + "|" + str(len(contenu)) + "|" + contenu      # version clair de packet
+	if key:                                                     # si il y a une clé alors on chiffre sinon on envoie tel quel et du côté parent on le reçoit tel quel
+		packet = vigenere(packet, key)                           # version brouillée de packet
+	radio.send(packet)
 
 #Decrypt and unpack the packet received and return the fields value
 def unpack_data(encrypted_packet, key):
