@@ -10,6 +10,51 @@ import music
 nonce_counter = 0      #pour que les nonces soient uniques pour chaque msg
 
 
+#----------------------Entre ces pointillés c'est du code qu'on peut ajouter/ ne fait pas partie du squelette fourni par le staff UCL-------------------------------
+
+_____________________________________Code1__________________________________________________________________________________________________
+# Ce morceau de code là, peut être encore amélioré et y a un problème de son avec l'émission de la music, ça beugue au début, à corriger
+# Sert à détecter les sons pour afficher un msg qu'on peut éventuellement remplacer par un logo
+# Le seuil de chaque volume détecté, je l'ai choisi sur base de rien du tout donc à voir si ça correspond à la réalité
+# Le thème des musiques est à changer car c'est des sons de jeux qui ne correspond pas à la situation au moment t
+
+dernier_etat = 0
+
+while True:
+    niveau = microphone.sound_level()
+
+    if niveau > 120:
+        etat = 3
+    elif niveau > 100:
+        etat = 2
+    elif niveau > 80:
+        etat = 1
+    else:
+        etat = 0
+
+    if etat != dernier_etat:
+        if etat == 3:
+            display.scroll("Tres agite", delay=100, wait=False)
+            music.play(music.POWER_UP, wait=False)
+        elif etat == 2:
+            display.scroll("Agite", delay=100, wait=False)
+            music.play(music.JUMP_UP, wait=False)
+        elif etat == 1:
+            display.scroll("Reveille", delay=100, wait=False)
+            music.play(music.BA_DING, wait=False)
+        dernier_etat = etat
+
+    sleep(100)
+
+
+    if pin_logo.is_touched():
+        display.show(Image.HEART)
+    else:
+        display.clear()
+    sleep(100)
+________________________________________________Fin du code 1__________________________________________________________________________________________________
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def hashing(string):
 	"""
 	Hachage d'une chaîne de caractères fournie en paramètre.
