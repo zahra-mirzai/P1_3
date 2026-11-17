@@ -172,6 +172,17 @@ def receive_packet(packet_received, key):
             (int)lenght:           Longueur de la donnée en caractère
             (str) message:         Données reçue
     """
+	morceaux = packet_received.split("|", 2)
+	if len(morceaux) != 3:
+		return "", "", ""
+	type, longueur, contenu = morceaux
+	if not longueur.isdigit():
+		return "", "", ""
+	if int(longueur) != len(contenu):
+		return "", "", ""
+	return type, int(longueur), contenu
+
+
     
 #Calculate the challenge response
 def calculate_challenge_response(challenge):
