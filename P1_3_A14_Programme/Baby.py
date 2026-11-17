@@ -173,13 +173,9 @@ def receive_packet(packet_received, key):
             (str) message:         Données reçue
     """
 	morceaux = packet_received.split("|", 2)
-	if len(morceaux) != 3:
+	if len(morceaux) != 3 or not morceaux[1].isdigit() or int(morceau[1]) != len(morceaux[2]):
 		return "", "", ""
 	type, longueur, contenu = morceaux
-	if not longueur.isdigit():
-		return "", "", ""
-	if int(longueur) != len(contenu):
-		return "", "", ""
 	return type, int(longueur), contenu
 
 
