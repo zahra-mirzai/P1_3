@@ -8,6 +8,14 @@ import music
 #default : channel=7 (0-83), address = 0x75626974, group = 0 (0-255)
 
 nonce_counter = 0      #pour que les nonces soient uniques pour chaque msg
+radio.on()
+connexion_established = False                    # copier coller des variables dans le fichier parent
+key = "KEYWORD"
+connexion_key = None
+nonce_list = set()
+baby_state = 0
+set_volume(100)
+
 
 
 #----------------------Entre ces pointillés c'est du code qu'on peut ajouter/ ne fait pas partie du squelette fourni par le staff UCL-------------------------------
