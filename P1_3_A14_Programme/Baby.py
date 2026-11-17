@@ -20,7 +20,7 @@ set_volume(100)
 
 #----------------------Entre ces pointillés c'est du code qu'on peut ajouter/ ne fait pas partie du squelette fourni par le staff UCL-------------------------------
 
-_____________________________________Code1__________________________________________________________________________________________________
+#_____________________________________Code1__________________________________________________________________________________________________
 # Ce morceau de code là, peut être encore amélioré et y a un problème de son avec l'émission de la music, ça beugue au début, à corriger
 # Sert à détecter les sons pour afficher un msg qu'on peut éventuellement remplacer par un logo
 # Le seuil de chaque volume détecté, je l'ai choisi sur base de rien du tout donc à voir si ça correspond à la réalité
@@ -68,7 +68,7 @@ while True:
          display.clear()
     
     sleep(100)
-________________________________________________Fin du code 1__________________________________________________________________________________________________
+#________________________________________________Fin du code 1__________________________________________________________________________________________________
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def hashing(string):
@@ -144,14 +144,14 @@ def send_packet(key, type, content):
            (str) content:   Données à envoyer
 	:return none
     """
-	global nonce_counter
-	nonce_counter += 1    #donc direct le premier msg a un nonce de 1
-	nonce = str(nonce_counter)   
-	contenu = nonce + ":" + content
-	packet = type + "|" + str(len(contenu)) + "|" + contenu      # version clair de packet
-	if key:                                                     # si il y a une clé alors on chiffre sinon on envoie tel quel et du côté parent on le reçoit tel quel
-		packet = vigenere(packet, key)                           # version brouillée de packet
-	radio.send(packet)
+    global nonce_counter
+    nonce_counter += 1    #donc direct le premier msg a un nonce de 1
+    nonce = str(nonce_counter)   
+    contenu = nonce + ":" + content
+    packet = type + "|" + str(len(contenu)) + "|" + contenu      # version clair de packet
+    if key:                                                     # si il y a une clé alors on chiffre sinon on envoie tel quel et du côté parent on le reçoit tel quel
+        packet = vigenere(packet, key)                           # version brouillée de packet
+    radio.send(packet)
 
 #Decrypt and unpack the packet received and return the fields value
 def unpack_data(encrypted_packet, key):
@@ -180,17 +180,15 @@ def receive_packet(packet_received, key):
             (int)lenght:           Longueur de la donnée en caractère
             (str) message:         Données reçue
     """
-	morceaux = packet_received.split("|", 2)
-	if len(morceaux) != 3 or not morceaux[1].isdigit() or int(morceau[1]) != len(morceaux[2]):
-		return "", "", ""
-	type, longueur, contenu = morceaux
-	if ":" not in contenu:
-		return "", "", ""
-	nonce, message = contenu.split(":", 1)
-	if nonce in nonce_list:
-		return "", "", ""
-	nonce_list.add(nonce)
-	return type, len(message), message
+    morceaux = packet_received.split("|", 2)
+    if len(morceaux) != 3:
+        return "", "", ""
+    type, longueur, contenu = morceaux
+    if not longueur.isdigit():
+        return "", "", ""
+    if int(longueur) != len(contenu):
+        return "", "", ""
+    return type, int(longueur), contenu
 
 
     
