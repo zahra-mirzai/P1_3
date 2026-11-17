@@ -176,7 +176,13 @@ def receive_packet(packet_received, key):
 	if len(morceaux) != 3 or not morceaux[1].isdigit() or int(morceau[1]) != len(morceaux[2]):
 		return "", "", ""
 	type, longueur, contenu = morceaux
-	return type, int(longueur), contenu
+	if ":" not in contenu:
+		return "", "", ""
+	nonce, message = contenu.split(":", 1)
+	if nonce in nonce_list:
+		return "", "", ""
+	nonce_list.add(nonce)
+	return type, len(message), message
 
 
     
