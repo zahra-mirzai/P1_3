@@ -91,14 +91,14 @@ def send_packet(key, type, content):
            (str) content:   Données à envoyer
 	:return none
     """
-	global nonce_counter
-	nonce_counter += 1    #donc direct le premier msg a un nonce de 1
-	nonce = str(nonce_counter)   
-	contenu = nonce + ":" + content
-	packet = type + "|" + str(len(contenu)) + "|" + contenu      # version clair de packet
-	if key:                                                     # si il y a une clé alors on chiffre sinon on envoie tel quel et du côté parent on le reçoit tel quel
-		packet = vigenere(packet, key)                           # version brouillée de packet
-	radio.send(packet)
+    global nonce_counter
+    nonce_counter += 1    #donc direct le premier msg a un nonce de 1
+    nonce = str(nonce_counter)   
+    contenu = nonce + ":" + content
+    packet = type + "|" + str(len(contenu)) + "|" + contenu      # version clair de packet
+    if key:                                                     # si il y a une clé alors on chiffre sinon on envoie tel quel et du côté parent on le reçoit tel quel
+        packet = vigenere(packet, key)                           # version brouillée de packet
+    radio.send(packet)
 
 #Unpack the packet, check the validity and return the type, length and content
 def unpack_data(encrypted_packet, key):
@@ -125,17 +125,17 @@ def receive_packet(packet_received, key):
             (int)lenght:           Longueur de la donnée en caractère
             (str) message:         Données reçue
     """
-	morceaux = packet_received.split("|", 2)
-	if len(morceaux) != 3 or not morceaux[1].isdigit() or int(morceau[1]) != len(morceaux[2]):
-		return "", "", ""
-	type, longueur, contenu = morceaux
-	if ":" not in contenu:
-		return "", "", ""
-	nonce, message = contenu.split(":", 1)
-	if nonce in nonce_list:
-		return "", "", ""
-	nonce_list.add(nonce)
-	return type, len(message), message
+    morceaux = packet_received.split("|", 2)
+    if len(morceaux) != 3 or not morceaux[1].isdigit() or int(morceaux[1]) != len(morceaux[2]):
+        return "", "", ""
+    type, longueur, contenu = morceaux
+    if ":" not in contenu:
+        return "", "", ""
+    nonce, message = contenu.split(":", 1)
+    if nonce in nonce_list:
+        return "", "", ""
+    nonce_list.add(nonce)
+    return type, len(message), message
 
 
 #Calculate the challenge response
@@ -158,3 +158,4 @@ def respond_to_connexion_request(key):
     """
 
 def main():
+    a = 1 #à modifier

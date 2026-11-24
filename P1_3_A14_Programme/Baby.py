@@ -27,19 +27,40 @@ set_volume(100)
 # Le thème des musiques est à changer car c'est des sons de jeux qui ne correspond pas à la situation au moment t
 
 dernier_etat = 0
+biberons = 0
+son = ["E4:3", "E", "G", "E", "E", "G", "E", "G", "C5:", "B4:", "A", "A",
+      "G", "D", "E", "F", "D", "D", "E", "F", "D", "F", "B", "A", "G", "B", "C5:"]
+set_volume(200)
+i = 0
 
 while True:
     niveau = microphone.sound_level()
-
-    if niveau > 120:
+    if niveau > 200:
         etat = 3
-    elif niveau > 100:
+    elif niveau > 170:
         etat = 2
-    elif niveau > 80:
+    elif niveau > 130:
         etat = 1
     else:
-        etat = 0
+        etat = 0 
 
+    if button_a.is_pressed() and button_b.is_pressed():
+        biberons = 0
+        display.scroll(biberons)
+        display.scroll("reset")
+    elif button_a.is_pressed():
+        biberons += 1
+        display.scroll(biberons)
+    elif button_b.is_pressed():
+        biberons -= 1
+        display.scroll(biberons)
+    
+    if pin_logo.is_touched():
+        while i <= 5:
+            music.play(son)
+            i += 1
+        i = 0
+    
     if etat != dernier_etat:
         if etat == 3:
             display.scroll("Tres agite", delay=100, wait=False)
@@ -52,22 +73,13 @@ while True:
             music.play(music.BA_DING, wait=False)
         dernier_etat = etat
 
-    sleep(100)
-
-
-    if pin_logo.is_touched():
-        display.show(Image.HEART)
-    else:
-        display.clear()
 
     message = radio.receive()
     if message:
         display.scroll(message)
-    if button_a.is_pressed():
-         radio.send("0x01|5|Salut")
+    if button_a.was_pressed():
+         radio.send("Salut")
          display.clear()
-    
-    sleep(100)
 #________________________________________________Fin du code 1__________________________________________________________________________________________________
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
