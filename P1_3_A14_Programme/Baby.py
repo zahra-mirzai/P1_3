@@ -4,17 +4,25 @@ import random
 import music
 
 #Can be used to filter the communication, only the ones with the same parameters will receive messages
-#radio.config(group=23, channel=2, address=0x11111111)
+radio.config(group=23, channel=2, address=0x11111111)
 #default : channel=7 (0-83), address = 0x75626974, group = 0 (0-255)
 
-nonce_counter = 0      #pour que les nonces soient uniques pour chaque msg
-radio.on()
-connexion_established = False                    # copier coller des variables dans le fichier parent
-key = "KEYWORD"
-connexion_key = None
-nonce_list = set()
-baby_state = 0
-set_volume(100)
+key = "KEYWORD"            
+connexion_key = None       
+nonce_list = set()         
+dernier_recu = 0           
+nonce_counter = 0          
+milk_count = 0             
+# Types : 1 connexion, 2 confirmation, 3 état d'éveil, 4 lait, 5 pleurs
+list_type = ["1", "2", "3", "4", "5"]
+
+# Seuils de détection : À CALIBRER si nécessaire
+SEUIL_MOUVEMENT = 300      
+NB_MESURES = 50            
+SEUIL_BRUIT = 120          
+NB_BRUIT_MIN = 20          # mesures bruyantes nécessaires pour parler de pleurs
+IMAGES = {"0": Image.ASLEEP, "1": Image.CONFUSED, "2": Image.ANGRY}
+
 
 
 
@@ -165,6 +173,14 @@ def unpack_data(encrypted_packet, key):
             (int)lenght:           Longueur de la donnée en caractères
             (str) message:         Données reçues
     """
+	if key:
+        paquet_clair = vigenere(encrypted_packet, key, decryption=True)
+    else:
+        paquet_clair = encrypted_packet
+    morceaux = paquet_clair.split("|", 2)
+    if len(morceaux) != 3 or not morceaux[1].isdigit() or int(morceaux[1]) != len(morceaux[2]):
+        return "", "", ""
+    return morceaux[0], int(morceaux[1]), morceaux[2]
 
 
 #Unpack the packet, check the validity and return the type, length and content
@@ -180,15 +196,16 @@ def receive_packet(packet_received, key):
             (int)lenght:           Longueur de la donnée en caractère
             (str) message:         Données reçue
     """
-    morceaux = packet_received.split("|", 2)
-    if len(morceaux) != 3:
+	type, longueur, contenu = unpack_data(packet_received, key)
+    if type == "" or type not in list_type:
         return "", "", ""
-    type, longueur, contenu = morceaux
-    if not longueur.isdigit():
+    if ":" not in contenu:
         return "", "", ""
-    if int(longueur) != len(contenu):
+    nonce, message = contenu.split(":", 1)
+    if nonce in nonce_list:
         return "", "", ""
-    return type, int(longueur), contenu
+    nonce_list.add(nonce)     # mémorisé en dernier, une fois tout validé
+    return type, len(message), message
 
 
     
@@ -200,6 +217,9 @@ def calculate_challenge_response(challenge):
     :param (str) challenge:            Challenge reçu
 	:return (srt)challenge_response:   Réponse au challenge
     """
+	random.seed(int(challenge))
+    challenge_response = random.randint(0, 999999)   # mêmes bornes des deux côtés
+    return str(challenge_response)
     
 #Ask for a new connection with a micro:bit of the same group
 def establish_connexion(key):
@@ -210,6 +230,92 @@ def establish_connexion(key):
     :param (str) key:                  Clé de chiffrement
 	:return (srt)challenge_response:   Réponse au challenge
     """
+	challenge = str(random.randint(0, 999999))
+    challenge_response = calculate_challenge_response(challenge)
+    send_packet(key, "1", challenge)
+    debut = running_time()
+    while running_time() - debut < 3000:
+        paquet = radio.receive()
+        if paquet is not None:
+            type, longueur, message = receive_packet(paquet, key)
+            if type != "" and message == hashing(challenge_response):
+                return challenge_response
+    return ""
 
+# --------------------------------- Fonctions ajoutées par notre groupe --------------------------------------
+def handle_incoming():
+    """Lit la radio et mémorise la quantité de lait envoyée par le parent."""
+    global milk_count, dernier_recu
+    paquet = radio.receive()
+    if paquet is not None and connexion_key:
+        type, longueur, message = receive_packet(paquet, connexion_key)
+        if type != "":
+            dernier_recu = running_time()
+        if type == "4" and message.isdigit():
+            milk_count = int(message)
+
+def analyze():
+    """
+    Observe l'enfant pendant 5 secondes (mouvements + bruit).
+    Retourne (état, pleurs) en texte : état "0" endormi, "1" agité, "2" très agité ;
+    pleurs "0" ou "1". Une chute (freefall) donne tout de suite "2".
+    """
+    mouvements = 0
+    bruit = 0
+    x0, y0, z0 = accelerometer.get_values()
+    for i in range(NB_MESURES):
+        sleep(100)
+        handle_incoming()
+        if button_b.was_pressed():
+            display.show(milk_count)
+        if accelerometer.was_gesture("freefall"):
+            return "2", "0"
+        x, y, z = accelerometer.get_values()
+        delta = abs(x - x0) + abs(y - y0) + abs(z - z0)
+        if delta > SEUIL_MOUVEMENT:
+            mouvements += 1
+        x0, y0, z0 = x, y, z
+        if microphone.sound_level() > SEUIL_BRUIT:
+            bruit += 1
+    pleurs = "0"
+    if bruit >= NB_BRUIT_MIN:
+        pleurs = "1"
+    if mouvements > 25:
+        return "2", pleurs
+    if mouvements > 5:
+        return "1", pleurs
+    return "0", pleurs
+#---------------------------------------------------------------------------------------------------------
 def main():
-    return True
+	global connexion_key, dernier_recu
+    radio.on()
+    display.show(Image.HEART_SMALL)
+    reponse = ""
+    while reponse == "":
+        nonce_list.clear()
+        reponse = establish_connexion(key)
+    connexion_key = key + reponse
+    dernier_recu = running_time()
+
+    etat_precedent = ""
+    pleurs_precedent = ""
+    while True:
+        etat, pleurs = analyze()
+        display.show(IMAGES[etat])      # À FAIRE : rassurer le bébé (son doux)
+        if etat != etat_precedent:
+            send_packet(connexion_key, "3", etat)
+            etat_precedent = etat
+        if pleurs != pleurs_precedent:
+            send_packet(connexion_key, "5", pleurs)
+            pleurs_precedent = pleurs
+   
+        if running_time() - dernier_recu > 30000:
+            reponse = ""
+            while reponse == "":
+                nonce_list.clear()
+                reponse = establish_connexion(key)
+            connexion_key = key + reponse
+            dernier_recu = running_time()
+            etat_precedent = ""        # on renvoie l'état courant au parent
+            pleurs_precedent = ""
+    main()
