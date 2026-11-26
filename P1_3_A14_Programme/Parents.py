@@ -4,10 +4,9 @@ import random
 import music
 
 #Can be used to filter the communication, only the ones with the same parameters will receive messages
-#radio.config(group=23, channel=2, address=0x11111111)
+radio.config(group=23, channel=2, address=0x11111111)
 #default : channel=7 (0-83), address = 0x75626974, group = 0 (0-255)
 
-#Initialisation des variables du micro:bit
 radio.on()
 connexion_established = False
 key = "KEYWORD"
@@ -15,7 +14,10 @@ connexion_key = None
 nonce_list = set()
 baby_state = 0
 set_volume(100)
-nonce_counter = 0
+nonce_counter = 0          
+milk_count = 0             
+# Types : 1 connexion, 2 confirmation, 3 état d'éveil, 4 lait, 5 pleurs
+list_type = ["1", "2", "3", "4", "5"]
 
 def hashing(string):
 	"""
@@ -112,6 +114,14 @@ def unpack_data(encrypted_packet, key):
             (int)length:           Longueur de la donnée en caractères
             (str) message:         Données reçue
     """
+	if key:
+        paquet_clair = vigenere(encrypted_packet, key, decryption=True)
+    else:
+        paquet_clair = encrypted_packet
+    morceaux = paquet_clair.split("|", 2)
+    if len(morceaux) != 3 or not morceaux[1].isdigit() or int(morceaux[1]) != len(morceaux[2]):
+        return "", "", ""
+    return morceaux[0], int(morceaux[1]), morceaux[2]
 
 def receive_packet(packet_received, key):
     """
@@ -125,17 +135,16 @@ def receive_packet(packet_received, key):
             (int)lenght:           Longueur de la donnée en caractère
             (str) message:         Données reçue
     """
-	morceaux = packet_received.split("|", 2)
-	if len(morceaux) != 3 or not morceaux[1].isdigit() or int(morceau[1]) != len(morceaux[2]):
-		return "", "", ""
-	type, longueur, contenu = morceaux
-	if ":" not in contenu:
-		return "", "", ""
-	nonce, message = contenu.split(":", 1)
-	if nonce in nonce_list:
-		return "", "", ""
-	nonce_list.add(nonce)
-	return type, len(message), message
+	type, longueur, contenu = unpack_data(packet_received, key)
+    if type == "" or type not in list_type:
+        return "", "", ""
+    if ":" not in contenu:
+        return "", "", ""
+    nonce, message = contenu.split(":", 1)
+    if nonce in nonce_list:
+        return "", "", ""
+    nonce_list.add(nonce)     # mémorisé en dernier, une fois tout validé
+    return type, len(message), message
 
 
 #Calculate the challenge response
@@ -146,6 +155,9 @@ def calculate_challenge_response(challenge):
     :param (str) challenge:            Challenge reçu
 	:return (srt)challenge_response:   Réponse au challenge
     """
+	random.seed(int(challenge))
+    challenge_response = random.randint(0, 999999)   # mêmes bornes des deux côtés
+    return str(challenge_response)
 
 #Respond to a connexion request by sending the hash value of the number received
 def respond_to_connexion_request(key):
@@ -156,5 +168,15 @@ def respond_to_connexion_request(key):
     :param (str) key:                   Clé de chiffrement
 	:return (srt) challenge_response:   Réponse au challenge
     """
+	debut = running_time()
+    while running_time() - debut < 3000:
+        paquet = radio.receive()
+        if paquet is not None:
+            type, longueur, message = receive_packet(paquet, key)
+            if type == "1" and message.isdigit():
+                return answer_challenge(key, message)
+    return ""
 
 def main():
+
+main()
